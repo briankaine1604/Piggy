@@ -52,13 +52,13 @@ namespace PiggyBank
             return accountNumber;
         }
 
-        public Account CreateAccount(string name, string city, string pin)
+        public Account CreateAccount(string name, string city, string pin, decimal deposit)
         {
             Customer customer = new Customer(name, city);
 
             string accountNumber = GenerateAccountNumber();
 
-            Account account = new(accountNumber, customer, 5000m, pin);
+            Account account = new(accountNumber, customer, deposit, pin);
 
             AddAccount(account);
 
