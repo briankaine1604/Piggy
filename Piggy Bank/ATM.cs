@@ -156,8 +156,20 @@ namespace PiggyBank
 
         private void CreateAccount()
         {
-            Console.Write("Enter your name: ");
-            string name = Console.ReadLine() ?? "";
+            string name;
+
+            while (true)
+            {
+                Console.Write("Enter your name: ");
+                name = Console.ReadLine() ?? "";
+
+                if (!string.IsNullOrWhiteSpace(name))
+                {
+                    break;
+                }
+
+                Console.WriteLine("Name cannot be empty. Try again.");
+            }
 
             Console.Write("Enter your city: ");
             string city = Console.ReadLine() ?? "";
@@ -165,7 +177,34 @@ namespace PiggyBank
             Console.Write("Choose a PIN: ");
             string pin = Console.ReadLine() ?? "";
 
-            Account account = _bank.CreateAccount(name, city, pin);
+            Console.Write("How much do you want to deposit?: ");
+            string depositInString = Console.ReadLine() ?? "";
+
+            if (string.IsNullOrWhiteSpace(name))
+            {
+                Console.WriteLine("Name cannot be empty.");
+                return;
+            }
+
+            if (pin.Length != 4 || !pin.All(char.IsDigit))
+            {
+                Console.WriteLine("PIN must contain exactly four digits.");
+                return;
+            }
+
+            if (!decimal.TryParse(depositInString, out decimal deposit))
+            {
+                Console.WriteLine("Invalid amount. Please enter a number.");
+                return;
+            }
+
+            if (deposit <= 0)
+            {
+                Console.WriteLine("Opening deposit must be greater than zero.");
+                return;
+            }
+
+            Account account = _bank.CreateAccount(name, city, pin, deposit);
 
             Console.WriteLine("\nAccount created successfully!");
             Console.WriteLine($"Account number: {account.AccountNumber}");
