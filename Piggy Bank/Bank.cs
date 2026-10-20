@@ -58,37 +58,42 @@ namespace PiggyBank
 
             string accountNumber = GenerateAccountNumber();
 
-            Account account = new(accountNumber, customer, deposit, pin);
-
+            Account account = new(accountNumber, customer, 0m, pin);
+            account.Credit(deposit, "Opening deposit", "Deposit");
             AddAccount(account);
 
             return account;
 
         }
 
-        public bool Transfer(Account sender, string recipientAccountNumber, decimal amount)
+        public TransferResult  Transfer(Account sender, string recipientAccountNumber, decimal amount)
         {
             if (amount <= 0)
             {
                 //Console.WriteLine("Amount must be greater than zero");
-                return false;
+                return TransferResult.AmountInvalid;
+            }
+
+            if (sender.AccountNumber == recipientAccountNumber)
+            {
+                return TransferResult.SameAccount;
             }
             var recipient = GetAccount(recipientAccountNumber);
             if (recipient == null)
             {
                 //Console.WriteLine("Account does not exist");
-                return false;
+                return TransferResult.RecipientInvalid;
             }
            
-            bool success = sender.TryDebit(amount);
+            bool success = sender.TryDebit(amount, $"Transfer to {recipient.AccountHolder.Name} {recipientAccountNumber}", "Transfer Out");
 
             if (success == false)
             {
                 //Console.WriteLine("Insufficient Funds");
-                return false;
-            }
-            recipient.Credit(amount);
-            return true;
+                return TransferResult.InsufficientFunds;
+            } 
+            recipient.Credit(amount, $"Transfer from {sender.AccountHolder.Name} {sender.AccountNumber}", "Transfer In");
+            return TransferResult.Success;
 
         }
     }

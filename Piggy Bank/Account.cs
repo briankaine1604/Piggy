@@ -1,6 +1,8 @@
-﻿using System;
+﻿using PiggyBank;
+using System;
 using System.Collections.Generic;
 using System.Text;
+
 
 namespace PiggyBank
 {
@@ -13,17 +15,21 @@ namespace PiggyBank
         public string AccountPin { get; private set; } = String.Empty;
 
         public Customer AccountHolder { get; private set; }
+
+        private readonly List<Transaction> _transactions = new();
+        public IReadOnlyList<Transaction> Transactions => _transactions;
         public Account(string accountNumber, Customer holder, decimal openingBalance, string accountPin)
         {
             AccountNumber = accountNumber;
             AccountHolder = holder;
             Balance = openingBalance;
             AccountPin = accountPin;
+           
         }
 
 
 
-        public bool TryDebit(decimal amount)
+        public bool TryDebit(decimal amount, string description, string type)
         {
             if (amount <= 0)
                 throw new ArgumentOutOfRangeException(
@@ -33,19 +39,24 @@ namespace PiggyBank
                 return false;
 
             Balance -= amount;
+            AddTransaction(new Transaction(amount, type, description , DateTime.Now));
             return true;
         }
 
-        public void Credit(decimal amount)
+        public void Credit(decimal amount, string description, string type)
         {
             if (amount <= 0)
                 throw new ArgumentOutOfRangeException(nameof(amount), "Amount must be greater than zero.");
 
             Balance += amount;
+            AddTransaction(new Transaction(amount, type, description, DateTime.Now));
         }
 
 
-
+        private void AddTransaction(Transaction transaction)
+        {
+            _transactions.Add(transaction);
+        }
 
     }
 }
