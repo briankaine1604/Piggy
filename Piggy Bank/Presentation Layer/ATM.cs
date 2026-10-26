@@ -1,4 +1,5 @@
 ﻿using PiggyBank;
+using PiggyBank.Http;
 using System;
 using System.Collections.Generic;
 using System.Net;
@@ -8,6 +9,9 @@ namespace PiggyBank
 {
     public class ATM
     {
+        // Accounts starting with this prefix belong to UnityBank, not to this bank.
+        private const string UnityBankPrefix = "303";
+
         private readonly Bank _bank;
 
         private readonly ATMConsole _atmConsole;
@@ -16,13 +20,21 @@ namespace PiggyBank
 
         private readonly Admin _admin;
 
+        private readonly BankHttpClient _httpClient;
 
-        public ATM(Bank bank, ATMConsole atmConsole, AdminConsole adminConsole, Admin admin)
+
+        public ATM(
+            Bank bank,
+            ATMConsole atmConsole,
+            AdminConsole adminConsole,
+            Admin admin,
+            BankHttpClient httpClient)
         {
             _bank = bank;
             _atmConsole = atmConsole;
             _adminConsole = adminConsole;
             _admin = admin;
+            _httpClient = httpClient;
         }
 
         private void AdminLogin()
@@ -182,6 +194,13 @@ namespace PiggyBank
                 return;
             }
 
+            if (recipientAccountNumber.StartsWith(UnityBankPrefix))
+            {
+                TransferToUnityBank(sender, recipientAccountNumber, amount);
+
+                return;
+            }
+
             TransferResult result = _bank.Transfer(
                 sender, recipientAccountNumber, amount);
 
@@ -207,6 +226,47 @@ namespace PiggyBank
                     _atmConsole.DisplayInsufficientFunds();
                     break;
             }
+        }
+
+        private void TransferToUnityBank(
+            Account sender,
+            string recipientAccountNumber,
+            decimal amount)
+        {
+            // Take the money out first, so a slow or dead link can never send
+            // funds this account does not have.
+            bool debited = sender.TryDebit(
+                amount,
+                $"Inter-bank transfer to UnityBank {recipientAccountNumber}",
+                "Transfer Out");
+
+            if (!debited)
+            {
+                _atmConsole.DisplayInsufficientFunds();
+
+                return;
+            }
+
+            // Blocking on purpose: the console menu has to stay in step with the
+            // request, and there is no UI thread here to deadlock on.
+            (bool success, string message) =
+                _httpClient.TransferAsync(recipientAccountNumber, amount)
+                    .GetAwaiter().GetResult();
+
+            if (success)
+            {
+                _atmConsole.DisplayInterBankTransferSuccess(amount, sender.Balance);
+
+                return;
+            }
+
+            // UnityBank did not accept it, so put the money back.
+            sender.Credit(
+                amount,
+                $"Reversal: inter-bank transfer to UnityBank {recipientAccountNumber} failed",
+                "Transfer In");
+
+            _atmConsole.DisplayInterBankTransferFailed(message);
         }
 
         public void Run()
@@ -261,14 +321,20 @@ namespace PiggyBank
                         break;
 
                     case "2":
+                        if (IsBlockedByFreeze(account)) break;
+
                         Deposit(account);
                         break;
 
                     case "3":
+                        if (IsBlockedByFreeze(account)) break;
+
                         Withdraw(account);
                         break;
 
                     case "4":
+                        if (IsBlockedByFreeze(account)) break;
+
                         Transfer(account);
                         break;
 
@@ -277,10 +343,14 @@ namespace PiggyBank
                         break;
 
                     case "6":
+                        if (IsBlockedByFreeze(account)) break;
+
                         BuyAirtime(account);
                         break;
 
                     case "7":
+                        if (IsBlockedByFreeze(account)) break;
+
                         BuyData(account);
                         break;
 
@@ -294,6 +364,18 @@ namespace PiggyBank
                         break;
                 }
             }
+        }
+
+        /// Money-moving operations are blocked on a frozen account; balance and
+        /// transaction history stay available.
+        private bool IsBlockedByFreeze(Account account)
+        {
+            if (!account.IsFrozen)
+                return false;
+
+            _atmConsole.DisplayAccountFrozen();
+
+            return true;
         }
 
         private void CreateAccount()
@@ -328,10 +410,11 @@ namespace PiggyBank
                 return;
             }
 
+            // A frozen account can still log in: AccountMenu blocks the
+            // operations that move money and leaves balance/history available.
             if (account.IsFrozen)
             {
                 _atmConsole.DisplayAccountFrozen();
-                return;
             }
 
             AccountMenu(account);
