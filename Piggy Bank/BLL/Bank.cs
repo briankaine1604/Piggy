@@ -91,14 +91,14 @@ public class Bank
             return TransferResult.RecipientInvalid;
         }
        
-        bool success = sender.TryDebit(amount, $"Transfer to {recipient.AccountHolder.Name} {recipientAccountNumber}", "Transfer Out");
+        bool success = sender.TryDebit(amount, $"Transfer to {recipient.AccountHolder.Name} {recipientAccountNumber} (PiggyBank)", "Transfer Out");
 
         if (success == false)
         {
             //Console.WriteLine("Insufficient Funds");
             return TransferResult.InsufficientFunds;
         } 
-        recipient.Credit(amount, $"Transfer from {sender.AccountHolder.Name} {sender.AccountNumber}", "Transfer In");
+        recipient.Credit(amount, $"Transfer from {sender.AccountHolder.Name} {sender.AccountNumber} (PiggyBank)", "Transfer In");
         return TransferResult.Success;
 
     }

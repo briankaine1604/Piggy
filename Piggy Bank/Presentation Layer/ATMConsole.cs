@@ -8,7 +8,10 @@ public class ATMConsole
 
     public void DisplayMainMenu()
     {
-        Console.WriteLine("\n=== ATM ===");
+        Console.WriteLine();
+        Console.WriteLine(new string('=', 60));
+        Console.WriteLine("                P I G G Y   B A N K   A T M");
+        Console.WriteLine(new string('=', 60));
         Console.WriteLine("1. Create account");
         Console.WriteLine("2. Customer login");
         Console.WriteLine("3. Admin login");
@@ -283,7 +286,19 @@ public class ATMConsole
 
     public void DisplayAccountFrozen()
     {
-        Console.WriteLine("This account is frozen. Please contact the bank.");
+        Console.WriteLine("This account is frozen. Only balance and transaction history are available.");
+    }
+
+    public void DisplayInterBankTransferSuccess(decimal amount, decimal newBalance)
+    {
+        Console.WriteLine($"Inter-bank transfer successful. Amount: {amount:N2}");
+        Console.WriteLine($"Remaining balance: {newBalance:N2}");
+    }
+
+    public void DisplayInterBankTransferFailed(string message)
+    {
+        Console.WriteLine($"Inter-bank transfer failed: {message}");
+        Console.WriteLine("The amount has been reversed on this account.");
     }
 
 }

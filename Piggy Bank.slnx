@@ -1,3 +1,4 @@
 <Solution>
   <Project Path="Piggy Bank/Piggy Bank.csproj" />
+  <Project Path="UnityBank/UnityBank.csproj" />
 </Solution>
